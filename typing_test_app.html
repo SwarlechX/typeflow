@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TypeFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root {
+  --bg: #0f0f0f;
+  --surface: #161616;
+  --surface2: #1e1e1e;
+  --border: rgba(255,255,255,0.07);
+  --accent: #e8c96a;
+  --accent2: #6ab4e8;
+  --text: #e0e0e0;
+  --muted: #555;
+  --correct: #6ec97a;
+  --wrong: #e86a6a;
+  --cursor: #e8c96a;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1rem;
+  user-select: none;
+}
+
+header {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+.logo span { color: var(--text); }
+
+.stats-bar {
+  display: flex;
+  gap: 1.5rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.stat-val { color: var(--text); font-size: 1.1rem; font-weight: 500; transition: color 0.2s; }
+.stat-val.live { color: var(--accent); }
+
+.controls {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.2rem 0 0.8rem;
+  flex-wrap: wrap;
+}
+
+.pill-group {
+  display: flex;
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.pill {
+  padding: 0.28rem 0.85rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+
+.pill.active {
+  background: var(--accent);
+  color: #0f0f0f;
+  font-weight: 500;
+}
+
+.pill:hover:not(.active) { color: var(--text); }
+
+.sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 0.3rem;
+  align-self: center;
+}
+
+.lang-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lang-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.3rem 2rem 0.3rem 0.85rem;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.lang-select:hover { border-color: rgba(255,255,255,0.2); }
+
+.lang-arrow {
+  position: absolute;
+  right: 0.7rem;
+  pointer-events: none;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.timer-display {
+  margin-left: auto;
+  font-family: 'DM Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 300;
+  color: var(--accent);
+  min-width: 3.5rem;
+  text-align: right;
+  transition: color 0.3s;
+}
+
+.timer-display.urgent { color: var(--wrong); animation: pulse 0.5s ease infinite alternate; }
+@keyframes pulse { from{opacity:1} to{opacity:0.5} }
+
+.test-area {
+  width: 100%;
+  max-width: 900px;
+  margin: 1rem 0 0;
+  position: relative;
+  cursor: text;
+}
+
+.words-wrapper {
+  position: relative;
+  padding: 1.5rem;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  min-height: 110px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.words-wrapper.focused { border-color: rgba(232,201,106,0.25); }
+.words-wrapper.finished { border-color: rgba(110,201,122,0.3); }
+
+.words-container {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.25rem;
+  line-height: 1.9;
+  letter-spacing: 0.01em;
+  transition: filter 0.2s;
+  position: relative;
+}
+
+.words-container.blurred { filter: blur(4px); pointer-events: none; }
+
+.click-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.click-hint.visible { opacity: 1; }
+
+.word {
+  display: inline-block;
+  margin-right: 0.5em;
+  position: relative;
+}
+
+.letter {
+  color: var(--muted);
+  position: relative;
+  transition: color 0.05s;
+}
+.letter.correct { color: var(--correct); }
+.letter.wrong { color: var(--wrong); text-decoration: underline; text-decoration-color: var(--wrong); }
+.letter.active-letter::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 10%;
+  height: 80%;
+  width: 2px;
+  background: var(--cursor);
+  border-radius: 2px;
+  animation: blink 0.7s step-end infinite;
+}
+.letter.active-letter.after::before {
+  left: 100%;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.word.current-word { background: rgba(255,255,255,0.02); border-radius: 3px; }
+
+.extra-letter { color: var(--wrong); opacity: 0.8; }
+
+#hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  top: 0; left: 0;
+  width: 1px; height: 1px;
+}
+
+.result-screen {
+  width: 100%;
+  max-width: 900px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 0;
+  gap: 1.5rem;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.result-screen.visible { display: flex; }
+
+.result-big {
+  display: flex;
+  gap: 3rem;
+  align-items: flex-end;
+}
+
+.result-metric { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.result-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 3.5rem;
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+}
+.result-val.secondary { font-size: 2.2rem; color: var(--accent2); }
+.result-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+.result-details {
+  display: flex;
+  gap: 2rem;
+  padding: 1.2rem 2rem;
+  background: var(--surface);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.detail-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.detail-val { font-family: 'DM Mono', monospace; font-size: 1.2rem; color: var(--text); }
+.detail-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.btn-restart {
+  background: var(--accent);
+  color: #0f0f0f;
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.8rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.btn-restart:hover { opacity: 0.85; transform: scale(1.02); }
+
+.restart-hint {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.8rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.progress-bar-container {
+  width: 100%;
+  max-width: 900px;
+  height: 2px;
+  background: var(--surface);
+  border-radius: 1px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  border-radius: 1px;
+  transition: width 0.3s linear;
+}
+
+footer {
+  margin-top: auto;
+  padding: 1.5rem 0 1rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  display: flex;
+  gap: 1rem;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Type<span>Flow</span></div>
+  <div class="stats-bar">
+    <div class="stat-item"><span class="stat-val" id="live-wpm">-</span><span>wpm</span></div>
+    <div class="stat-item"><span class="stat-val" id="live-acc">-</span><span>acc</span></div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="pill-group" id="mode-group">
+    <button class="pill active" data-mode="time">süre</button>
+    <button class="pill" data-mode="words">kelime</button>
+    <button class="pill" data-mode="quote">alıntı</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="pill-group" id="time-group">
+    <button class="pill active" data-time="15">15s</button>
+    <button class="pill" data-time="30">30s</button>
+    <button class="pill" data-time="60">60s</button>
+    <button class="pill" data-time="120">120s</button>
+  </div>
+
+  <div class="pill-group" id="words-group" style="display:none">
+    <button class="pill active" data-count="10">10</button>
+    <button class="pill" data-count="25">25</button>
+    <button class="pill" data-count="50">50</button>
+    <button class="pill" data-count="100">100</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="lang-select-wrapper">
+    <select class="lang-select" id="lang-select">
+      <option value="tr">🇹🇷 Türkçe</option>
+      <option value="en" selected>🇺🇸 English</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="it">🇮🇹 Italiano</option>
+      <option value="pt">🇧🇷 Português</option>
+      <option value="ru">🇷🇺 Русский</option>
+      <option value="ja">🇯🇵 日本語</option>
+      <option value="ko">🇰🇷 한국어</option>
+      <option value="zh">🇨🇳 中文</option>
+      <option value="ar">🇸🇦 العربية</option>
+      <option value="nl">🇳🇱 Nederlands</option>
+      <option value="pl">🇵🇱 Polski</option>
+      <option value="sv">🇸🇪 Svenska</option>
+      <option value="no">🇳🇴 Norsk</option>
+      <option value="fi">🇫🇮 Suomi</option>
+      <option value="da">🇩🇰 Dansk</option>
+      <option value="cs">🇨🇿 Čeština</option>
+      <option value="hu">🇭🇺 Magyar</option>
+    </select>
+    <span class="lang-arrow">▼</span>
+  </div>
+
+  <div class="timer-display" id="timer-display">15</div>
+</div>
+
+<div class="progress-bar-container">
+  <div class="progress-bar" id="progress-bar"></div>
+</div>
+
+<div class="test-area" id="test-area" onclick="focusInput()">
+  <div class="words-wrapper" id="words-wrapper">
+    <div class="words-container blurred" id="words-container"></div>
+    <div class="click-hint visible" id="click-hint">testin başlatmak için tıkla veya klavyeye bas</div>
+    <div class="restart-hint">tab + enter → yeniden başlat</div>
+  </div>
+  <input type="text" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+</div>
+
+<div class="result-screen" id="result-screen">
+  <div class="result-big">
+    <div class="result-metric">
+      <div class="result-val" id="res-wpm">0</div>
+      <div class="result-label">wpm</div>
+    </div>
+    <div class="result-metric">
+      <div class="result-val secondary" id="res-acc">0%</div>
+      <div class="result-label">doğruluk</div>
+    </div>
+  </div>
+  <div class="result-details">
+    <div class="detail-item"><div class="detail-val" id="res-raw">0</div><div class="detail-label">ham wpm</div></div>
+    <div class="detail-item"><div class="detail-val" id="res-correct">0</div><div class="detail-label">doğru</div></div>
+    <div class="detail-item"><div class="detail-val" id="res-wrong">0</div><div class="detail-label">yanlış</div></div>
+    <div class="detail-item"><div class="detail-val" id="res-chars">0</div><div class="detail-label">karakter</div></div>
+    <div class="detail-item"><div class="detail-val" id="res-time">0s</div><div class="detail-label">süre</div></div>
+  </div>
+  <button class="btn-restart" onclick="restartTest()">↺ tekrar dene</button>
+</div>
+
+<footer>
+  <span>typeflow © 2025</span>
+  <span>·</span>
+  <span>tab+enter → yenile</span>
+</footer>
+
+<script>
+const WORD_LISTS = {
+  en: ["the","be","to","of","and","a","in","that","have","it","for","not","on","with","he","as","you","do","at","this","but","his","by","from","they","we","say","her","she","or","an","will","my","one","all","would","there","their","what","so","up","out","if","about","who","get","which","go","me","when","make","can","like","time","no","just","him","know","take","people","into","year","your","good","some","could","them","see","other","than","then","now","look","only","come","its","over","think","also","back","after","use","two","how","our","work","first","well","way","even","new","want","because","any","these","give","day","most","us","great","between","need","large","often","hand","high","place","hold","real","life","few","north","open","seem","together","next","white","children","begin","got","walk","example","ease","paper","group","always","music","those","both","mark","book","letter","until","mile","river","car","feet","care","second","enough","plain","girl","usual","young","ready","above","ever","red","list","though","feel","talk","bird","soon","body","dog","family","direct","pose","leave","song","measure","door","product","black","short","numeral","class","wind","question","happen","complete","ship","area","half","rock","order","fire","south","problem","piece","told","knew","pass","since","top","whole","king","space","heard","best","hour","better","true","during","hundred","five","remember","step","early","hold","west","ground","interest","reach","fast","verb","sing","listen","six","table","travel","less","morning","ten","simple","several","vowel","toward","war","lay","against","pattern","slow","center","love","person","money","serve","appear","road","map","rain","rule","govern","pull","cold","notice","voice","unit","power","town","fine","drive","lead","cry","dark","machine","note","wait","plan","figure","star","box","noun","field","rest","correct","able","pound","done","beauty","drive","stood","contain","front","teach","week","final","gave","green","oh","quick","develop","ocean","warm","free","minute","strong","special","behind","clear","tail","produce","fact","street","inch","multiply","nothing","course","stay","wheel","full","force","blue","object","decide","surface","deep","moon","island","foot","system","busy","test","record","boat","common","gold","possible","plane","stead","dry","wonder","laugh","thousand","ago","ran","check","game","shape","equate","hot","miss","brought","heat","snow","tire","bring","yes","distant","fill","east","paint","language","among","grand","ball","yet","wave","drop","heart","am","present","heavy","dance","engine","position","arm","wide","sail","material","size","vary","settle","speak","weight","general","ice","matter","circle","pair","include","divide","syllable","felt","perhaps","pick","sudden","count","square","reason","length","represent","art","subject","region","energy","hunt","probable","bed","brother","egg","ride","cell","believe","fraction","forest","sit","race","window","store","summer","train","sleep","prove","lone","leg","exercise","wall","catch","mount","wish","sky","board","joy","winter","sat","written","wild","instrument","kept","glass","grass","cow","job","edge","sign","visit","past","soft","fun","bright","gas","weather","month","million","bear","finish","happy","hope","flower","clothe","strange","gone","jump","baby","eight","village","meet","root","buy","raise","solve","metal","whether","push","seven","paragraph","third","shall","held","hair","describe","cook","floor","either","result","burn","hill","safe","cat","century","consider","type","law","bit","coast","copy","phrase","silent","tall","sand","soil","roll","temperature","finger","industry","value","fight","lie","beat","excite","natural","view","sense","ear","else","quite","broke","case","middle","kill","son","lake","moment","scale","loud","spring","observe","child","straight","consonant","nation","dictionary","milk","speed","method","organ","pay","age","section","dress","cloud","surprise","quiet","stone","small","tiny","climb","cool","design","poor","lot","experiment","bottom","key","iron","single","stick","flat","twenty","skin","smile","crease","hole","trade","melody","trip","office","receive","row","mouth","exact","symbol","die","least","trouble","shout","except","wrote","seed","tone","join","suggest","clean","break","lady","yard","rise","bad","blow","oil","blood","touch","grew","cent","mix","team","wire","cost","lost","brown","wear","garden","equal","sent","choose","fell","fit","flow","fair","bank","collect","save","control","decimal","gentle","woman","captain","practice","separate","difficult","doctor","please","protect","noon","whose","locate","ring","character","insect","caught","period","indicate","radio","spoke","atom","human","history","effect","electric","expect","crop","modern","element","hit","student","corner","party","supply","bone","rail","imagine","provide","agree","thus","capital","won","careful","shore","probable","duck","instantaneous"],
+  tr: ["bir","ve","bu","da","için","ile","olan","den","var","ne","de","ben","o","biz","ya","mi","ama","çok","çünkü","nasıl","zaman","gibi","her","en","iyi","daha","sonra","onlar","siz","hiç","kim","olarak","şey","gün","yıl","insan","dünya","büyük","küçük","iş","ev","yer","gelir","bilgi","zaman","adam","kadın","çocuk","okul","şehir","ülke","hayat","para","yol","soru","cevap","baş","el","göz","gece","sabah","öğle","akşam","yemek","su","ışık","ateş","toprak","hava","ses","renk","şekil","kelime","sayı","adı","yaş","güzel","yeni","eski","uzun","kısa","hızlı","yavaş","açık","kapalı","tam","yarım","farklı","aynı","iki","üç","dört","beş","altı","yedi","sekiz","dokuz","on","yüz","bin","ay","hafta","saat","dakika","saniye","burada","orada","nerede","zaman","nasıl","niçin","kim","ne","hangi","tüm","bazı","birçok","hep","her","hiç","hem","ya","veya","ise","iken","gibi","kadar","önce","sonra","şimdi","artık","hala","bile","daha","çok","az","fazla","biraz","sadece","yalnız","özellikle","genellikle","bazen","sık","nadiren","mutlaka","kesinlikle","belki","sanki","sanırım","umarım","tabii","evet","hayır","tamam","lütfen","teşekkür","merhaba","günaydın","iyi","kötü","doğru","yanlış","gerçek","sahte","kolay","zor","önemli","gerekli","mümkün","imkansız","hazır","bekle","başla","bitir","gel","git","dur","bak","dinle","konuş","yaz","oku","say","düşün","anla","bil","gör","duy","his","sev","nefret","kork","güven","unut","hatırla","öğren","öğret","çalış","dinlen","uy","kalk","otur","yürü","koş","atla","döne","çevir","vur","al","ver","koy","çıkar","gir","çık","aç","kapat","yak","söndür","bul","kaybet","kazan","oyna","gül","ağla","şarkı","müzik","dans","spor","kitap","gazete","dergi","film","tiyatro","müze","park","bahçe","orman","dağ","deniz","nehir","göl","ada","köy","kasaba","şehir","ülke","kıta","dünya","uzay","güneş","ay","yıldız","bulut","yağmur","kar","fırtına","rüzgar","soğuk","sıcak","ılık","mevsim","ilkbahar","yaz","sonbahar","kış","bitki","ağaç","çiçek","meyve","sebze","hayvan","kuş","balık","köpek","kedi","at","inek","koyun","aslan","kaplan","fil","maymun","yılan","böcek","ekmek","süt","et","tavuk","pirinç","makarna","çorba","salata","tatlı","kahve","çay","meyve","sebze","tatil","seyahat","turizm","otel","uçak","tren","otobüs","araba","bisiklet","tekne","gemi","bina","ev","daire","oda","salon","mutfak","banyo","balkon","bahçe","kapı","pencere","tavan","zemin","duvar","merdiven","asansör","masa","sandalye","yatak","koltuk","dolap","raf","lamba","telefon","bilgisayar","televizyon","radyo","saat","anahtar","para","cüzdan","çanta","ayakkabı","gömlek","pantolon","elbise","mont","şapka","eldiven","gözlük","mektup","fatura","belge","imza","form","liste","plan","proje","toplantı","sunum","rapor","analiz","strateji","hedef","başarı","hata","sorun","çözüm","karar","öneri","seçenek","fırsat","tehlike","risk","avantaj","dezavantaj","fayda","zarar","kazanç","kayıp","artış","azalış","büyüme","gelişme","ilerleme","gerileme","değişim","dönüşüm","yenilik","yaratıcılık","sanat","kültür","tarih","edebiyat","bilim","teknoloji","mühendislik","matematik","fizik","kimya","biyoloji","tıp","hukuk","ekonomi","siyaset","toplum","aile","arkadaş","komşu","vatandaş","devlet","hükümet","milletvekili","cumhurbaşkanı","başbakan","bakan","yargıç","avukat","doktor","öğretmen","öğrenci","mühendis","mimar","sanatçı","oyuncu","yazar","gazeteci","işçi","memur","yönetici","müdür","patron","müşteri","tedarikçi","ortak","rakip","anlaşma","sözleşme","kanun","yasa","kural","düzenleme","politika","strateji","vizyon","misyon","değer","ilke","etik","ahlak","adalet","özgürlük","eşitlik","demokrasi","insan hakları","barış","savaş","çatışma","kriz","çözüm","uzlaşma","işbirliği","dayanışma","yardım","destek","teşvik","motivasyon","başarı","gurur","mutluluk","huzur","umut","hayal","gelecek","geçmiş","şimdi","an","süre","dönem","çağ","nesil","tarih","gelenek","kültür","miras","kimlik","öz","benlik","toplum","birlik","beraberlik"],
+  de: ["der","die","das","und","in","ist","von","mit","auf","dem","den","des","ein","eine","einer","einer","sich","nicht","auch","er","sie","es","an","du","bei","uns","war","wie","im","so","wir","wenn","aus","als","weil","mehr","hat","ich","oder","mein","aber","man","ja","dann","können","unter","über","nach","nur","noch","durch","gegen","alle","sehr","weil","doch","haben","dass","hier","bis","zwei","machen","schon","noch","heute","kommen","sagen","können","mögen","sehen","gehen","nehmen","wissen","Zeit","Welt","Jahr","Mann","Frau","Kind","Haus","Stadt","Land","Mensch","Arbeit","Leben","Tag","Hand","Weg","Wort","Fall","Recht","Wasser","Seite","Platz","Zahl","Kopf","Bild","Volk","Schule","Buch","Geld","Teil","Art","Staat","Gruppe","Auge","Herz","Körper","Stimme","Blut","Luft","Feuer","Erde","Welt","Himmel","Sonne","Mond","Stern","Baum","Blume","Tier","Hund","Katze","Vogel","Fisch","Pferd","Regen","Wind","Schnee","Kälte","Wärme","Licht","Nacht","Morgen","Abend","Sommer","Winter","Herbst","Frühling"],
+  fr: ["le","la","les","de","du","un","une","et","en","je","il","elle","nous","vous","ils","elles","que","qui","ne","pas","plus","par","sur","au","aux","avec","se","son","sa","ses","leur","leurs","ce","cet","cette","ces","mon","ma","mes","ton","ta","tes","avoir","être","faire","dire","aller","voir","vouloir","venir","prendre","savoir","pouvoir","falloir","devoir","mettre","passer","parler","penser","rester","donner","trouver","chercher","temps","monde","an","jour","homme","femme","enfant","pays","ville","maison","vie","main","porte","chose","place","travail","corps","oeil","coeur","voix","eau","feu","terre","ciel","soleil","lune","nuit","matin","soir","été","hiver","printemps","automne","arbre","fleur","oiseau","chien","chat","poisson","vent","pluie","neige","lumière","couleur","mot","nombre","musique","livre","argent","route","chemin","école","histoire","amour","bonheur","liberté","paix","guerre","famille","ami","voisin","pays","nation","peuple","société","gouvernement","loi","droit","justice","science","art","culture","nature","espace","mer","rivière","montagne","forêt","champ","village","rue","bâtiment","chambre","cuisine","jardin","voiture","avion","train","bateau"],
+  es: ["el","la","los","las","un","una","unos","unas","y","en","de","que","se","no","por","con","su","para","al","del","una","él","es","son","fue","ser","estar","tener","hacer","decir","ir","ver","dar","saber","querer","llegar","pasar","deber","poner","parecer","quedar","creer","hablar","llevar","dejar","seguir","encontrar","llamar","venir","pensar","salir","volver","tiempo","mundo","año","hombre","mujer","niño","país","ciudad","casa","vida","mano","parte","lugar","forma","día","hecho","pueblo","agua","fuego","tierra","cielo","sol","luna","noche","mañana","tarde","verano","invierno","otoño","primavera","árbol","flor","animal","perro","gato","pájaro","pez","lluvia","viento","nieve","luz","color","sonido","música","libro","dinero","camino","escuela","historia","amor","felicidad","libertad","paz","guerra","familia","amigo","vecino","nación","pueblo","gobierno","ley","derecho","justicia","ciencia","arte","cultura","naturaleza","mar","río","montaña","bosque","campo","pueblo","calle","edificio","habitación","cocina","jardín","coche","avión","tren","barco","corazón","voz","sangre","cuerpo","mente","alma","sueño","esperanza","fe","verdad","belleza"],
+  it: ["il","la","le","un","una","e","in","di","che","non","si","con","per","al","del","una","lui","lei","è","sono","stato","essere","avere","fare","dire","andare","vedere","dare","sapere","volere","venire","prendere","pensare","parlare","trovare","cercare","tempo","mondo","anno","uomo","donna","bambino","paese","città","casa","vita","mano","parte","posto","lavoro","corpo","occhio","cuore","voce","acqua","fuoco","terra","cielo","sole","luna","notte","mattino","sera","estate","inverno","primavera","autunno","albero","fiore","animale","cane","gatto","uccello","pesce","pioggia","vento","neve","luce","colore","suono","musica","libro","soldi","strada","scuola","storia","amore","felicità","libertà","pace","guerra","famiglia","amico","vicino","nazione","popolo","governo","legge","diritto","giustizia","scienza","arte","cultura","natura","mare","fiume","montagna","bosco","campo","villaggio","strada","edificio","stanza","cucina","giardino","macchina","aereo","treno","barca"],
+  pt: ["o","a","os","as","um","uma","e","em","de","que","se","não","por","com","seu","sua","para","ao","do","da","ele","ela","é","são","foi","ser","estar","ter","fazer","dizer","ir","ver","dar","saber","querer","vir","tomar","pensar","falar","encontrar","deixar","seguir","tempo","mundo","ano","homem","mulher","criança","país","cidade","casa","vida","mão","parte","lugar","trabalho","corpo","olho","coração","voz","água","fogo","terra","céu","sol","lua","noite","manhã","tarde","verão","inverno","primavera","outono","árvore","flor","animal","cão","gato","pássaro","peixe","chuva","vento","neve","luz","cor","som","música","livro","dinheiro","caminho","escola","história","amor","felicidade","liberdade","paz","guerra","família","amigo","vizinho","nação","povo","governo","lei","direito","justiça","ciência","arte","cultura","natureza","mar","rio","montanha","floresta","campo","aldeia","rua","edifício","quarto","cozinha","jardim","carro","avião","trem","barco"],
+  ru: ["и","в","не","на","я","быть","он","с","что","а","по","это","она","этот","к","но","они","мы","как","из","у","который","то","за","свой","что","все","её","так","его","можно","при","было","вот","от","мне","ещё","бы","для","вы","же","за","раз","нас","там","тебя","день","год","человек","рука","раз","сказать","знать","говорить","думать","хотеть","видеть","идти","стать","жить","время","место","работа","жизнь","слово","друг","город","страна","дом","вода","огонь","земля","небо","солнце","луна","ночь","утро","вечер","лето","зима","осень","весна","дерево","цветок","животное","собака","кошка","птица","рыба","дождь","ветер","снег","свет","цвет","звук","музыка","книга","деньги","дорога","школа","история","любовь","счастье","свобода","мир","война","семья","друг","сосед","народ","правительство","закон","право","справедливость","наука","искусство","культура","природа","море","река","гора","лес","поле","деревня","улица","здание","комната","кухня","сад","машина","самолёт","поезд","корабль"],
+  ja: ["の","に","は","を","た","が","で","て","と","し","れ","さ","ある","いる","も","する","から","な","こと","として","い","や","れる","など","なっ","ない","この","ため","その","あっ","よっ","よ","よう","また","もの","という","あり","まし","です","ます","これ","すべて","表示","人","日","本","年","大","国","中","自","行","あ","れ","か","わ","ちの","これ","的","上","多","が","て","い","を","と","さ","し","は","で","に","たり","ため","から","まで","もの","こと","ので","れる","られ","おり","おる","いく","くる","みる","なる","できる","思う","言う","見る","知る","使う","作る","持つ","入る","出る","始める","終わる","時間","世界","日本","人間","社会","仕事","生活","問題","方法","場合","必要","可能","最も","一つ","二つ","三つ","多く","少し","とても","よく","まず","次に","また","そして","しかし","だから","そのため","例えば","つまり","実は","実際","特に","主に","基本的","重要","様々","異なる","同じ","新しい","古い","大きい","小さい","高い","低い","長い","短い","良い","悪い","難しい","簡単","美しい","楽しい","悲しい","嬉しい","怖い","便利","素晴らしい","不思議","自然","文化","歴史","科学","技術","芸術","音楽","教育","医療","政治","経済","環境","家族","友達","先生","学生","子供","男性","女性","大人","老人"],
+  ko: ["이","의","에","는","가","을","를","한","하","있","하다","있다","되다","이다","그","우리","그는","그녀","그들","우리","당신","나","저","지금","오늘","내일","어제","여기","거기","저기","이것","그것","저것","무엇","어떻게","왜","언제","누가","어디","시간","사람","세계","나라","도시","집","학교","일","생활","문제","방법","필요","가능","중요","다양","같은","다른","새로운","오래된","크다","작다","높다","낮다","좋다","나쁘다","어렵다","쉽다","아름답다","재미있다","슬프다","기쁘다","무섭다","편리하다","훌륭하다","자연","문화","역사","과학","기술","예술","음악","교육","의료","정치","경제","환경","가족","친구","선생님","학생","아이","남성","여성","어른","노인","물","불","땅","하늘","해","달","밤","아침","저녁","여름","겨울","봄","가을","나무","꽃","동물","개","고양이","새","물고기","비","바람","눈","빛","색","소리","음악","책","돈","길","마음","사랑","행복","자유","평화","전쟁"],
+  zh: ["的","了","在","是","我","他","她","们","这","那","有","你","不","也","都","而","并","为","一","上","下","人","时","来","去","到","说","看","想","做","知","得","好","大","小","多","少","新","老","长","短","高","低","美","丑","快","慢","强","弱","对","错","真","假","同","不同","已","还","又","再","很","太","最","更","只","就","都","也","而且","但是","所以","因为","如果","虽然","但","一样","一起","一直","一定","时间","世界","中国","人们","社会","工作","生活","问题","方法","情况","发展","需要","可能","重要","不同","主要","基本","特别","实际","一般","总是","经常","有时","偶尔","已经","还没","正在","刚刚","马上","以前","以后","现在","地方","城市","国家","家庭","朋友","老师","学生","孩子","男人","女人","大人","老人","自然","文化","历史","科学","技术","艺术","音乐","教育","医疗","政治","经济","环境","水","火","土","天空","太阳","月亮","夜晚","早晨","傍晚","夏天","冬天","春天","秋天","树","花","动物","狗","猫","鸟","鱼","雨","风","雪","光","颜色","声音","书","钱","路","心","爱","快乐","自由","和平","战争"],
+  ar: ["في","من","إلى","على","هذا","هذه","كان","التي","الذي","وقد","كما","أو","مع","عن","أن","لم","لا","ما","هو","هي","ولا","كل","ذلك","وهو","لقد","وكان","بين","أيضا","كانت","قال","وأن","وهي","حتى","بعد","وفي","ثم","له","فيه","بل","إذا","إن","عند","وإن","منه","قبل","حين","وكما","أكثر","يكون","وعلى","ويمكن","ولكن","وقال","وهذا","وعن","أما","ومن","أو","وله","وبين","والتي","إلا","وإلى","فيها","وقد","لكن","لها","وإذا","شيء","وقال","اليوم","الشعب","الناس","العالم","الوقت","المكان","الكلمة","الحياة","العمل","الأسرة","الصديق","المدينة","الدولة","البيت","الماء","النار","الأرض","السماء","الشمس","القمر","الليل","الصباح","المساء","الصيف","الشتاء","الربيع","الخريف","الشجرة","الزهرة","الحيوان","الكلب","القطة","الطائر","السمكة","المطر","الريح","الثلج","الضوء","اللون","الصوت","الموسيقى","الكتاب","المال","الطريق","المدرسة","التاريخ","الحب","السعادة","الحرية","السلام","الحرب","الطبيعة","الثقافة","العلم","الفن","التعليم","الحكومة","القانون","العدالة"],
+  nl: ["de","het","een","en","van","in","is","op","te","dat","niet","aan","hij","zij","ook","zijn","met","als","er","naar","je","maar","om","door","nog","dan","bij","deze","uit","wat","zo","we","dit","maar","voor","al","zou","wel","nu","geen","tot","hier","twee","al","al","zelf","toch","meer","heeft","men","weer","werd","even","ander","groot","klein","lang","kort","snel","traag","open","gesloten","goed","slecht","nieuw","oud","mooi","lelijk","hard","zacht","zwaar","licht","hoog","laag","warm","koud","vol","leeg","tijd","wereld","jaar","mens","vrouw","man","kind","land","stad","huis","leven","hand","werk","dag","woord","weg","school","boek","geld","muziek","kunst","cultuur","natuur","geschiedenis","wetenschap","familie","vriend","buur","water","vuur","aarde","lucht","zon","maan","nacht","ochtend","avond","zomer","winter","lente","herfst","boom","bloem","dier","hond","kat","vogel","vis","regen","wind","sneeuw","licht","kleur","geluid"],
+  pl: ["w","i","z","na","że","nie","do","to","się","jak","ale","tak","już","po","przez","czy","co","go","jego","jej","mi","nie","dla","jest","jestem","być","mieć","chcieć","wiedzieć","widzieć","iść","mówić","robić","znać","czuć","czas","świat","rok","człowiek","dzień","życie","praca","miejsce","dom","woda","ogień","ziemia","niebo","słońce","księżyc","noc","rano","wieczór","lato","zima","wiosna","jesień","drzewo","kwiat","zwierzę","pies","kot","ptak","ryba","deszcz","wiatr","śnieg","światło","kolor","dźwięk","muzyka","książka","pieniądze","droga","szkoła","historia","miłość","szczęście","wolność","pokój","rodzina","przyjaciel","sąsiad","naród","rząd","prawo","nauka","sztuka","kultura","natura","kraj","miasto"],
+  sv: ["och","i","att","det","en","av","på","är","till","med","han","hon","de","vi","som","om","ett","inte","var","sig","från","men","när","för","så","ska","kan","den","man","också","nu","ut","sin","sina","hur","vid","över","under","mot","all","varje","efter","innan","sedan","tid","värld","år","människa","dag","liv","arbete","plats","hus","vatten","eld","jord","himmel","sol","måndag","natt","morgon","kväll","sommar","vinter","vår","höst","träd","blomma","djur","hund","katt","fågel","fisk","regn","vind","snö","ljus","färg","ljud","musik","bok","pengar","väg","skola","historia","kärlek","lycka","frihet","fred","familj","vän","granne","nation","regering","lag","rätt","vetenskap","konst","kultur","natur","hav","flod","berg","skog","fält","by","gata","byggnad","rum","kök","trädgård","bil","flygplan","tåg","båt"],
+  no: ["og","i","at","det","en","av","på","er","til","med","han","hun","de","vi","som","om","et","ikke","var","seg","fra","men","når","for","så","skal","kan","den","man","også","nå","ut","sin","sine","hvordan","ved","over","under","mot","all","hver","etter","før","siden","tid","verden","år","menneske","dag","liv","arbeid","plass","hus","vann","ild","jord","himmel","sol","måne","natt","morgen","kveld","sommer","vinter","vår","høst","tre","blomst","dyr","hund","katt","fugl","fisk","regn","vind","snø","lys","farge","lyd","musikk","bok","penger","vei","skole","historie","kjærlighet","lykke","frihet","fred","familie","venn","nabo","nasjon","regjering","lov","rett","vitenskap","kunst","kultur","natur","hav","elv","fjell","skog","mark","landsby","gate","bygning","rom","kjøkken","hage","bil","fly","tog","båt"],
+  fi: ["ja","on","ei","se","olla","hän","että","kuin","nyt","vielä","tai","kaikki","yksi","kaksi","kolme","neljä","viisi","kuusi","seitsemän","kahdeksan","yhdeksän","kymmenen","aika","maailma","vuosi","ihminen","päivä","elämä","työ","paikka","talo","vesi","tuli","maa","taivas","aurinko","kuu","yö","aamu","ilta","kesä","talvi","kevät","syksy","puu","kukka","eläin","koira","kissa","lintu","kala","sade","tuuli","lumi","valo","väri","ääni","musiikki","kirja","raha","tie","koulu","historia","rakkaus","onnellisuus","vapaus","rauha","perhe","ystävä","naapuri","kansakunta","hallitus","laki","oikeus","tiede","taide","kulttuuri","luonto","meri","joki","vuori","metsä","pelto","kylä","katu","rakennus","huone","keittiö","puutarha","auto","lentokone","juna","laiva"],
+  da: ["og","i","at","det","en","af","på","er","til","med","han","hun","de","vi","som","om","et","ikke","var","sig","fra","men","når","for","så","skal","kan","den","man","også","nu","ud","sin","sine","tid","verden","år","menneske","dag","liv","arbejde","sted","hus","vand","ild","jord","himmel","sol","måne","nat","morgen","aften","sommer","vinter","forår","efterår","træ","blomst","dyr","hund","kat","fugl","fisk","regn","vind","sne","lys","farve","lyd","musik","bog","penge","vej","skole","historie","kærlighed","lykke","frihed","fred","familie","ven","nabo","nation","regering","lov","ret","videnskab","kunst","kultur","natur","hav","flod","bjerg","skov","mark","landsby","gade","bygning","rum","køkken","have","bil","fly","tog","båd"],
+  cs: ["a","v","je","se","na","to","že","jako","ale","tak","také","již","po","pro","do","si","z","jak","má","jsou","být","mít","chtít","vědět","vidět","jít","říct","dělat","znát","čas","svět","rok","člověk","den","život","práce","místo","dům","voda","oheň","země","nebe","slunce","měsíc","noc","ráno","večer","léto","zima","jaro","podzim","strom","květ","zvíře","pes","kočka","pták","ryba","déšť","vítr","sníh","světlo","barva","zvuk","hudba","kniha","peníze","cesta","škola","dějiny","láska","štěstí","svoboda","mír","válka","rodina","přítel","soused","národ","vláda","zákon","právo","věda","umění","kultura","příroda","moře","řeka","hora","les","pole","vesnice","ulice","budova","pokoj","kuchyně","zahrada","auto","letadlo","vlak","loď"],
+  hu: ["és","a","az","hogy","nem","de","is","meg","mi","te","ő","ők","mi","ti","van","volt","lett","ez","az","ott","itt","most","már","még","csak","de","ha","ki","mi","hogy","mint","egy","két","három","négy","öt","hat","hét","nyolc","kilenc","tíz","idő","világ","év","ember","nap","élet","munka","hely","ház","víz","tűz","föld","ég","nap","hold","éjszaka","reggel","este","nyár","tél","tavasz","ősz","fa","virág","állat","kutya","macska","madár","hal","eső","szél","hó","fény","szín","hang","zene","könyv","pénz","út","iskola","történelem","szerelem","boldogság","szabadság","béke","háború","család","barát","szomszéd","nemzet","kormány","törvény","jog","tudomány","művészet","kultúra","természet","tenger","folyó","hegy","erdő","mező","falu","utca","épület","szoba","konyha","kert","autó","repülő","vonat","hajó"]
+};
+
+const QUOTES = {
+  en: ["The only way to do great work is to love what you do.","In the middle of every difficulty lies opportunity.","Life is what happens when you're busy making other plans.","The future belongs to those who believe in the beauty of their dreams.","It does not matter how slowly you go as long as you do not stop.","Everything you can imagine is real.","When you reach the end of your rope, tie a knot in it and hang on.","Always remember that you are absolutely unique. Just like everyone else.","Do not go where the path may lead, go instead where there is no path and leave a trail.","You will face many defeats in life, but never let yourself be defeated.","The greatest glory in living lies not in never falling, but in rising every time we fall.","In the end, it is not the years in your life that count. It is the life in your years.","Never let the fear of striking out keep you from playing the game.","Life is either a daring adventure or nothing at all."],
+  tr: ["Büyük işler yapmanın tek yolu, yaptığınız şeyi sevmektir.","Her zorluğun ortasında bir fırsat yatmaktadır.","Hayat, başka planlar yaparken olan şeydir.","Gelecek, hayallerinin güzelliğine inananlarındır.","Ne kadar yavaş gittiğin önemli değil, durduğun sürece.","Hayal edebildiğin her şey gerçektir.","Hayat kısa, güzel şeyler için zaman hep az.","Başarı, bir kapıdan öteye geçmek demektir.","Düşmek önemli değil, her düştüğünde kalkmak önemlidir.","Güzel günler seni bekliyor, sabret."]
+};
+
+let state = {
+  mode: 'time',
+  timeLimit: 15,
+  wordCount: 25,
+  lang: 'en',
+  words: [],
+  currentWordIndex: 0,
+  currentCharIndex: 0,
+  typed: [],
+  started: false,
+  finished: false,
+  startTime: null,
+  timerInterval: null,
+  timeLeft: 15,
+  focused: false,
+  totalKeystrokes: 0,
+  correctKeystrokes: 0,
+  wrongWords: 0,
+  correctWords: 0
+};
+
+function shuffle(arr) {
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function getWords() {
+  const list = WORD_LISTS[state.lang] || WORD_LISTS.en;
+  if(state.mode === 'quote') {
+    const qs = QUOTES[state.lang] || QUOTES.en;
+    const q = qs[Math.floor(Math.random()*qs.length)];
+    return q.split(' ').map(w=>w.toLowerCase().replace(/[^\w'-]/g,''));
+  }
+  const count = state.mode === 'words' ? state.wordCount : 200;
+  return shuffle([...list,...list]).slice(0,count);
+}
+
+function initTest() {
+  clearInterval(state.timerInterval);
+  state.words = getWords();
+  state.currentWordIndex = 0;
+  state.currentCharIndex = 0;
+  state.typed = state.words.map(()=>({chars:[], done:false, correct:false}));
+  state.started = false;
+  state.finished = false;
+  state.startTime = null;
+  state.timeLeft = state.timeLimit;
+  state.totalKeystrokes = 0;
+  state.correctKeystrokes = 0;
+  state.wrongWords = 0;
+  state.correctWords = 0;
+
+  document.getElementById('result-screen').classList.remove('visible');
+  document.getElementById('test-area').style.display = 'block';
+  document.getElementById('live-wpm').textContent = '-';
+  document.getElementById('live-acc').textContent = '-';
+  document.getElementById('live-wpm').classList.remove('live');
+  document.getElementById('live-acc').classList.remove('live');
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('timer-display').classList.remove('urgent');
+
+  if(state.mode === 'time') {
+    document.getElementById('timer-display').textContent = state.timeLimit;
+  } else {
+    document.getElementById('timer-display').textContent = '';
+  }
+
+  renderWords();
+  blurWords(true);
+}
+
+function renderWords() {
+  const container = document.getElementById('words-container');
+  container.innerHTML = '';
+  state.words.forEach((word, wi) => {
+    const wEl = document.createElement('span');
+    wEl.className = 'word' + (wi === state.currentWordIndex ? ' current-word' : '');
+    wEl.dataset.index = wi;
+    word.split('').forEach((ch, ci) => {
+      const l = document.createElement('span');
+      l.className = 'letter';
+      if(state.typed[wi] && ci < state.typed[wi].chars.length) {
+        l.className = 'letter ' + (state.typed[wi].chars[ci] === ch ? 'correct' : 'wrong');
+      }
+      if(wi === state.currentWordIndex && ci === state.currentCharIndex) {
+        l.classList.add('active-letter');
+      }
+      l.textContent = ch;
+      wEl.appendChild(l);
+    });
+    // extra typed chars beyond word length
+    if(state.typed[wi] && state.typed[wi].chars.length > word.length) {
+      for(let i=word.length;i<state.typed[wi].chars.length;i++) {
+        const l = document.createElement('span');
+        l.className = 'letter extra-letter wrong';
+        if(wi === state.currentWordIndex && i === state.currentCharIndex) l.classList.add('active-letter','after');
+        l.textContent = state.typed[wi].chars[i];
+        wEl.appendChild(l);
+      }
+    }
+    // cursor at end of word
+    if(wi === state.currentWordIndex && state.currentCharIndex >= word.length) {
+      const lastChild = wEl.lastChild;
+      if(lastChild && !lastChild.classList.contains('active-letter')) {
+        lastChild.classList.add('active-letter','after');
+      }
+    }
+    container.appendChild(wEl);
+  });
+  scrollToCurrentWord();
+}
+
+function scrollToCurrentWord() {
+  const container = document.getElementById('words-container');
+  const wrapper = document.getElementById('words-wrapper');
+  const currentEl = container.querySelector('.current-word');
+  if(!currentEl) return;
+  const wrapTop = wrapper.getBoundingClientRect().top;
+  const elTop = currentEl.getBoundingClientRect().top;
+  const relTop = elTop - wrapTop;
+  if(relTop > 60) {
+    container.style.marginTop = (parseFloat(container.style.marginTop||0) - relTop + 40) + 'px';
+  }
+  if(relTop < 0) {
+    container.style.marginTop = (parseFloat(container.style.marginTop||0) - relTop + 10) + 'px';
+  }
+}
+
+function blurWords(blur) {
+  const wc = document.getElementById('words-container');
+  const hint = document.getElementById('click-hint');
+  const wrapper = document.getElementById('words-wrapper');
+  if(blur) {
+    wc.classList.add('blurred');
+    hint.classList.add('visible');
+    wrapper.classList.remove('focused');
+  } else {
+    wc.classList.remove('blurred');
+    hint.classList.remove('visible');
+    wrapper.classList.add('focused');
+  }
+}
+
+function focusInput() {
+  if(state.finished) return;
+  document.getElementById('hidden-input').focus();
+  state.focused = true;
+  blurWords(false);
+}
+
+function startTimer() {
+  state.startTime = Date.now();
+  state.started = true;
+  if(state.mode === 'time') {
+    state.timerInterval = setInterval(() => {
+      const elapsed = (Date.now() - state.startTime) / 1000;
+      state.timeLeft = Math.max(0, state.timeLimit - elapsed);
+      const display = document.getElementById('timer-display');
+      display.textContent = Math.ceil(state.timeLeft);
+      if(state.timeLeft <= 5) display.classList.add('urgent');
+      const progress = ((state.timeLimit - state.timeLeft) / state.timeLimit) * 100;
+      document.getElementById('progress-bar').style.width = progress + '%';
+      updateLiveStats();
+      if(state.timeLeft <= 0) finishTest();
+    }, 50);
+  }
+}
+
+function updateLiveStats() {
+  if(!state.startTime) return;
+  const elapsed = (Date.now() - state.startTime) / 1000 / 60;
+  const wpmEl = document.getElementById('live-wpm');
+  const accEl = document.getElementById('live-acc');
+  if(elapsed > 0) {
+    const wpm = Math.round(state.correctKeystrokes / 5 / elapsed);
+    wpmEl.textContent = wpm;
+    wpmEl.classList.add('live');
+    const acc = state.totalKeystrokes > 0 ? Math.round((state.correctKeystrokes/state.totalKeystrokes)*100) : 100;
+    accEl.textContent = acc + '%';
+    accEl.classList.add('live');
+  }
+}
+
+function finishTest() {
+  clearInterval(state.timerInterval);
+  state.finished = true;
+  const elapsed = (Date.now() - state.startTime) / 1000;
+  const elapsedMin = elapsed / 60;
+  const wpm = Math.round(state.correctKeystrokes / 5 / elapsedMin);
+  const rawWpm = Math.round(state.totalKeystrokes / 5 / elapsedMin);
+  const acc = state.totalKeystrokes > 0 ? Math.round((state.correctKeystrokes/state.totalKeystrokes)*100) : 100;
+  // count correct/wrong words
+  let cw=0, ww=0, totalChars=0;
+  state.typed.forEach((t,i)=>{
+    if(t.done) {
+      const wordCorrect = t.chars.join('') === state.words[i];
+      if(wordCorrect) cw++; else ww++;
+      totalChars += t.chars.length;
+    }
+  });
+
+  document.getElementById('res-wpm').textContent = wpm;
+  document.getElementById('res-acc').textContent = acc + '%';
+  document.getElementById('res-raw').textContent = rawWpm;
+  document.getElementById('res-correct').textContent = cw;
+  document.getElementById('res-wrong').textContent = ww;
+  document.getElementById('res-chars').textContent = totalChars;
+  document.getElementById('res-time').textContent = Math.round(elapsed) + 's';
+  document.getElementById('progress-bar').style.width = '100%';
+
+  document.getElementById('words-wrapper').classList.add('finished');
+  document.getElementById('test-area').style.display = 'none';
+  document.getElementById('result-screen').classList.add('visible');
+}
+
+function restartTest() {
+  document.getElementById('words-container').style.marginTop = '0';
+  document.getElementById('words-wrapper').classList.remove('finished');
+  initTest();
+}
+
+document.getElementById('hidden-input').addEventListener('keydown', (e) => {
+  if(state.finished) return;
+  if(e.key === 'Tab') { e.preventDefault(); return; }
+  
+  if(!state.started && e.key !== 'Backspace') startTimer();
+
+  const word = state.words[state.currentWordIndex];
+  const typedWord = state.typed[state.currentWordIndex];
+
+  if(e.key === 'Backspace') {
+    if(typedWord.chars.length > 0) {
+      typedWord.chars.pop();
+      state.currentCharIndex = typedWord.chars.length;
+      renderWords();
+    } else if(state.currentWordIndex > 0 && !state.typed[state.currentWordIndex-1].done) {
+      state.currentWordIndex--;
+      state.currentCharIndex = state.typed[state.currentWordIndex].chars.length;
+      renderWords();
+    }
+    return;
+  }
+
+  if(e.key === ' ') {
+    if(typedWord.chars.length === 0) return;
+    typedWord.done = true;
+    typedWord.correct = typedWord.chars.join('') === word;
+    
+    if(state.mode === 'words' && state.currentWordIndex >= state.words.length - 1) {
+      finishTest(); return;
+    }
+    if(state.currentWordIndex < state.words.length - 1) {
+      state.currentWordIndex++;
+      state.currentCharIndex = 0;
+    }
+    renderWords();
+    updateLiveStats();
+    if(state.mode === 'words') {
+      const progress = (state.currentWordIndex / state.words.length) * 100;
+      document.getElementById('progress-bar').style.width = progress + '%';
+    }
+    return;
+  }
+
+  if(e.key.length === 1) {
+    if(typedWord.chars.length < word.length + 15) {
+      typedWord.chars.push(e.key);
+      state.currentCharIndex = typedWord.chars.length;
+      state.totalKeystrokes++;
+      if(e.key === word[typedWord.chars.length - 1]) state.correctKeystrokes++;
+      renderWords();
+      updateLiveStats();
+    }
+  }
+
+  if(state.mode === 'quote' && state.currentWordIndex === state.words.length - 1) {
+    const lastWord = state.words[state.words.length - 1];
+    if(state.typed[state.currentWordIndex].chars.join('') === lastWord) {
+      setTimeout(finishTest, 100);
+    }
+  }
+});
+
+document.getElementById('hidden-input').addEventListener('blur', () => {
+  if(!state.finished) {
+    state.focused = false;
+    blurWords(true);
+  }
+});
+
+document.querySelectorAll('#mode-group .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#mode-group .pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode;
+    document.getElementById('time-group').style.display = state.mode === 'time' ? 'flex' : 'none';
+    document.getElementById('words-group').style.display = state.mode === 'words' ? 'flex' : 'none';
+    document.getElementById('timer-display').style.display = state.mode === 'time' ? 'block' : 'none';
+    document.getElementById('words-container').style.marginTop = '0';
+    restartTest();
+  });
+});
+
+document.querySelectorAll('#time-group .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#time-group .pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.timeLimit = parseInt(btn.dataset.time);
+    restartTest();
+  });
+});
+
+document.querySelectorAll('#words-group .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#words-group .pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.wordCount = parseInt(btn.dataset.count);
+    restartTest();
+  });
+});
+
+document.getElementById('lang-select').addEventListener('change', (e) => {
+  state.lang = e.target.value;
+  restartTest();
+});
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Tab') {
+    e.preventDefault();
+    document.getElementById('hidden-input').focus();
+  }
+  if(e.key === 'Enter' && document.activeElement === document.getElementById('hidden-input')) {
+    restartTest();
+    setTimeout(focusInput, 50);
+  }
+});
+
+initTest();
+setTimeout(focusInput, 200);
+</script>
+</body>
+</html>
